@@ -14,10 +14,10 @@ except:
     from PIL.ExifTags import TAGS
 import math
 from osgeo import gdal, osr
-
+import glob
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 class AerialCorrection():
     def __init__(self, img, out_folder, pixel_size=4.4):
@@ -93,8 +93,8 @@ class AerialCorrection():
         # 计算边界框
         x, y, w, h = cv2.boundingRect(c)
         cropped_image = arr[y:y+h, x:x+w,:]
-        plt.imshow(cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB))
-        plt.show()
+        # plt.imshow(cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB))
+        # plt.show()
         return cropped_image
 
     def exif(self):
@@ -217,9 +217,65 @@ def rotate_image(image, yaw):
     return rotated_image
 
 
+def get_file_names(file_dir, file_types):
+    """
+    搜索指定目录下具有给定后缀名的文件，不包括子目录。
+
+    参数:
+    file_dir (str): 目录路径。
+    file_types (list[str] or str): 后缀名列表或单个后缀名（如 ['.txt', '.py'] 或 '.txt'）。
+
+    返回:
+    list[str]: 匹配的文件完整路径列表。
+    """
+    if isinstance(file_types, str):
+        # 如果只传入了一个后缀名，将其转换为列表
+        file_types = [file_types]
+
+        # 使用glob模块搜索文件
+    file_paths = []
+    for file_type in file_types:
+        # 使用glob的通配符模式搜索文件
+        pattern = os.path.join(file_dir, '*' + file_type)
+        file_paths.extend(glob.glob(pattern))
+
+    return file_paths
+
+
+
+
+def main(path,outpath,pixel_size=4.4):
+    pixel_size = float(pixel_size)
+    if os.path.exists(outpath) == False:
+        print('输出路径不存在，创建输出路径')
+        os.makedirs(outpath)
+    else:
+        print('输出路径已存在')
+    print('开始进行航片粗几何校正')
+    print('\n------------')
+    file_types = ['.JPG', '.jpg']  #
+    file_list1 = get_file_names(path, file_types)
+    i = 0
+    print(file_list1)
+    for file in file_list1:
+        A = AerialCorrection(file, outpath, pixel_size= pixel_size)
+        A.rotation()
+        i += 1
+        print("\r进行航片粗几何校正: [{0:50s}] {1:.1f}%".format('#' * int(i / (len(file_list1)) * 50),
+                                                              i / len(file_list1) * 100), end="",
+                  flush=True)
+
 
 if __name__ == '__main__':
-    A = AerialCorrection(r'E:\109弥市镇——康家档子北\DJI_20230410091159_0017.JPG', r'D:\test', pixel_size= 4.4)
+    # A = AerialCorrection(r'E:\109弥市镇——康家档子北\DJI_20230410091159_0017.JPG', r'D:\test', pixel_size= 4.4)
+    # a = A.rotation()
+    print('输入输出路径不包含中文')
+    path = input('输入无人机照片路径：')
+    outpath = input('输出路径：')
+    pixel_size = input('输入像元尺寸：')
 
-    a = A.rotation()
-    print(a)
+
+    main(path, outpath, pixel_size)
+
+    print('已完成')
+    input('输入任意键退出')
