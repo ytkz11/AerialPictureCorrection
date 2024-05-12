@@ -219,7 +219,7 @@ def rotate_image(image, yaw):
 
 
 if __name__ == '__main__':
-    A = AerialCorrection(r'E:\109弥市镇——康家档子北\DJI_20230410091235_0033.JPG', r'D:\test', pixel_size= 4.4)
+    A = AerialCorrection(r'E:\109弥市镇——康家档子北\DJI_20230410091159_0017.JPG', r'D:\test', pixel_size= 4.4)
 
     a = A.rotation()
     print(a)

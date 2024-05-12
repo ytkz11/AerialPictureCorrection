@@ -136,3 +136,18 @@ Latitude resolution = -1 x spatial resolution
 
 The GDAL library is used here to easily combine the cropped rotation image with affine six parameters to generate TIF format images.
 
+
+
+Drag the result to google earth, as shown below:
+
+![image-20240512202505950](https://raw.githubusercontent.com/ytkz11/picture/master/image-20240512202505950.png)
+
+![image-20240512201042676](https://raw.githubusercontent.com/ytkz11/picture/master/image-20240512201042676.png)
+
+The above can be considered as the rough geometry correction of aerial film. There is a certain deviation, about 2 meters.
+
+This is because when we calculate the spatial resolution, we assume the radius of the Earth. In fact, the local Earth radius is not the universal Earth radius we assume. According to the local latitude and longitude, the UTM coordinates can be converted to WGS84 coordinates.
+
+
+
+If the correction is to be refined, then it is necessary to carry out the feature point matching, the registration of aerial film and base map, and the direct configuration of aerial film and aerial film.
