@@ -50,7 +50,7 @@ class AerialCorrection():
         new_height,new_width = cropped_image.shape[:2]
 
         focal_length = self.get_len_info()  # 镜头参数
-        x_res_meter = float(self.pexel_size) * altitude / float(focal_length)  * 0.001  # 空间分辨率  单位是米
+        x_res_meter = float(self.pixel_size) * altitude / float(focal_length)  * 0.001  # 空间分辨率  单位是米
 
         x_res = x_res_meter / (2 * math.pi * 6371004) * 360   # 空间分辨率  单位是度 0.000008983
         left_coord = [longitude1 - x_res * new_width/ 2, latitude1 + x_res * new_height / 2]
