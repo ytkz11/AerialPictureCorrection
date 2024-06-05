@@ -250,26 +250,38 @@ def main(path,outpath,pixel_size=4.4):
     print('开始进行航片粗几何校正')
     print('\n------------')
     file_types = ['.JPG', '.jpg']  #
-    file_list1 = get_file_names(path, file_types)
-    i = 0
-    print(file_list1)
-    for file in file_list1:
-        A = AerialCorrection(file, outpath, pixel_size= pixel_size)
-        A.rotation()
-        i += 1
-        print("\r进行航片粗几何校正: [{0:50s}] {1:.1f}%".format('#' * int(i / (len(file_list1)) * 50),
-                                                              i / len(file_list1) * 100), end="",
-                  flush=True)
+    isfile = os.path.isfile(path)
+    if isfile:
+        print('你输入的是一个文件')
+        file_type = os.path.splitext(path)[-1]
+        if file_type == '.JPG' or file_type == '.jpg':
+            A = AerialCorrection(path, outpath, pixel_size= pixel_size)
+            A.rotation()
+        else:
+            print('你输入的是文件类型不是JPG格式')
+    else:
+        print('你输入的是一个文件夹')
+        print('即将进行批量处理')
+        file_list1 = get_file_names(path, file_types)
+        i = 0
+        print(file_list1)
+        for file in file_list1:
+            A = AerialCorrection(file, outpath, pixel_size= pixel_size)
+            A.rotation()
+            i += 1
+            print("\r进行航片粗几何校正: [{0:50s}] {1:.1f}%".format('#' * int(i / (len(file_list1)) * 50),
+                                                                  i / len(file_list1) * 100), end="",
+                      flush=True)
 
 
 if __name__ == '__main__':
-    A = AerialCorrection(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 4.4)
-    # A = AerialCorrection(r'D:\DJI_20230410091139_0008.JPG', r'D:\test', pixel_size=4.4)
-    a = A.rotation()
-    # print('输入输出路径不包含中文')
-    # path = input('输入无人机照片路径：')
-    # outpath = input('输出路径：')
-    # pixel_size = input('输入像元尺寸：')
+    # A = AerialCorrection(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 2.41)
+    # # A = AerialCorrection(r'D:\DJI_20230410091139_0008.JPG', r'D:\test', pixel_size=4.4)
+    # a = A.rotation()
+    print('输入输出路径不包含中文')
+    path = input('输入无人机照片路径：')
+    outpath = input('输出路径：')
+    pixel_size = input('输入像元尺寸：')
 
 
     # main(path, outpath, pixel_size)
