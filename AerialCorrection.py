@@ -234,7 +234,10 @@ def get_file_names(file_dir, file_types):
         # 使用glob的通配符模式搜索文件
         pattern = os.path.join(file_dir, '*' + file_type)
         file_paths.extend(glob.glob(pattern))
-
+    filter_path = []
+    for file in file_paths:
+        if file not in file_paths:
+            filter_path.append(file)
     return file_paths
 
 
@@ -284,7 +287,7 @@ if __name__ == '__main__':
     pixel_size = input('输入像元尺寸：')
 
 
-    # main(path, outpath, pixel_size)
+    main(path, outpath, pixel_size)
 
     print('已完成')
     input('输入任意键退出')
