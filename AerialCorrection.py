@@ -152,13 +152,9 @@ class AerialCorrection():
 
     def get_len_info(self):
         exif = self.exif()
-        lat = None  # 纬度
-        lon = None  # 经度
-
-        if exif.get('LensSpecification'):  # 如果EXIF中包含GPS信息
-            # 纬度
-            Lens = exif['LensSpecification']
-            focal_length = Lens[1]  # 焦距
+        if exif.get('FocalLength'):  #
+            #'FocalLength'
+            focal_length = exif['FocalLength']
         return focal_length
 
     def get_gps_info(self):
@@ -267,15 +263,16 @@ def main(path,outpath,pixel_size=4.4):
 
 
 if __name__ == '__main__':
-    # A = AerialCorrection(r'E:\109弥市镇——康家档子北\DJI_20230410091159_0017.JPG', r'D:\test', pixel_size= 4.4)
-    # a = A.rotation()
-    print('输入输出路径不包含中文')
-    path = input('输入无人机照片路径：')
-    outpath = input('输出路径：')
-    pixel_size = input('输入像元尺寸：')
+    A = AerialCorrection(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 4.4)
+    # A = AerialCorrection(r'D:\DJI_20230410091139_0008.JPG', r'D:\test', pixel_size=4.4)
+    a = A.rotation()
+    # print('输入输出路径不包含中文')
+    # path = input('输入无人机照片路径：')
+    # outpath = input('输出路径：')
+    # pixel_size = input('输入像元尺寸：')
 
 
-    main(path, outpath, pixel_size)
+    # main(path, outpath, pixel_size)
 
     print('已完成')
     input('输入任意键退出')
