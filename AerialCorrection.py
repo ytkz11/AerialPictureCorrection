@@ -361,7 +361,7 @@ if __name__ == '__main__':
     pixel_size = input('输入像元尺寸：')
 
     # main(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 2.41)
-    # main(path, outpath, pixel_size)
+    main(path, outpath, pixel_size)
 
     print('已完成')
     input('输入回车键退出')
