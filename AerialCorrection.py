@@ -13,11 +13,81 @@ except:
     from PIL import Image
     from PIL.ExifTags import TAGS
 import math
-from osgeo import gdal, osr
+from osgeo import  osr
 import glob
-import numpy as np
 import cv2
-# import matplotlib.pyplot as plt
+from zipfile import ZipFile
+from osgeo import gdal
+import codecs
+import numpy as np
+import PIL.Image as Image
+
+
+class tif2kmz:
+   def __init__(self, tif_file):
+       self.tif_file = tif_file
+       self.kmz_file = os.path.splitext(self.tif_file)[0] + '.kmz'
+
+   def get_arrtibute(self):
+       # 获取tif文件的属性, 用于生成kml文件
+       ds = gdal.Open(self.tif_file, gdal.GA_ReadOnly)
+       gt = ds.GetGeoTransform()
+       self.east_longitude = gt[0]
+       self.west_longitude = self.east_longitude + (ds.RasterXSize * gt[1])
+       self.north_latitude = gt[3]
+       self.south_latitude = self.north_latitude + (ds.RasterYSize * gt[5])
+
+   def create_temp_png(self):
+       ds = gdal.Open(self.tif_file, gdal.GA_ReadOnly)
+       png_file = 'overlay.png'
+       data = ds.ReadAsArray()
+       z,x,y = data.shape
+       temp_arr = np.zeros(shape=(x, y, 4))
+       for i in range(3):
+           temp_arr[:, :, i] = data[i, :, :]
+
+       temp_arr[:, :, 3][data[0, :, :] != 0] = 255  # 透明度.
+       temp_arr = temp_arr.astype(np.uint8)
+       img = Image.fromarray(temp_arr)
+       img.save(png_file)
+
+
+   def create_kml(self):
+       self.get_arrtibute()
+       overlay_name = "KML overlay"
+       kml = (
+                 '<?xml version="1.0" encoding="UTF-8"?>\n'
+                 '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
+                 ' <Folder>\n'
+                 '   <name>Ground Overlays</name>\n'
+                 '   <description>Examples of ground overlays</description>\n'
+                 '   <GroundOverlay>\n'
+                 '     <name>%s</name>\n'
+                 '     <Icon>\n'
+                 '       <href>overlay.png</href>\n'
+                 '     </Icon>\n'
+                 '     <LatLonBox>\n'
+                 '       <north>%f</north>\n'
+                 '       <south>%f</south>\n'
+                 '       <east>%f</east>\n'
+                 '       <west>%f</west>\n'
+                 '     </LatLonBox>\n'
+                 '   </GroundOverlay>\n'
+                 ' </Folder>\n'
+                 '</kml>\n'
+            ) % (overlay_name, self.north_latitude, self.south_latitude, self.east_longitude, self.west_longitude)
+
+       with codecs.open('overlay.kml', encoding='utf-8', mode='w+') as kmlFile:
+           kmlFile.write(kml)
+
+   def create_kmz(self):
+       self.create_temp_png()
+       self.create_kml()
+       with ZipFile(self.kmz_file, 'w') as zipObj:
+           # zipObj.writestr(kml_output_filename, kml) # Add doc.kml entry
+           zipObj.write('overlay.kml')
+           zipObj.write('overlay.png')
+
 
 class AerialCorrection():
     def __init__(self, img, out_folder, pixel_size=4.4):
@@ -236,9 +306,9 @@ def get_file_names(file_dir, file_types):
         file_paths.extend(glob.glob(pattern))
     filter_path = []
     for file in file_paths:
-        if file not in file_paths:
+        if file not in filter_path:
             filter_path.append(file)
-    return file_paths
+    return filter_path
 
 
 
@@ -260,6 +330,7 @@ def main(path,outpath,pixel_size=4.4):
         if file_type == '.JPG' or file_type == '.jpg':
             A = AerialCorrection(path, outpath, pixel_size= pixel_size)
             A.rotation()
+            tif2kmz(A.out_name).create_kmz()
         else:
             print('你输入的是文件类型不是JPG格式')
     else:
@@ -271,7 +342,10 @@ def main(path,outpath,pixel_size=4.4):
         for file in file_list1:
             A = AerialCorrection(file, outpath, pixel_size= pixel_size)
             A.rotation()
+
+            tif2kmz(A.out_name).create_kmz()
             i += 1
+
             print("\r进行航片粗几何校正: [{0:50s}] {1:.1f}%".format('#' * int(i / (len(file_list1)) * 50),
                                                                   i / len(file_list1) * 100), end="",
                       flush=True)
@@ -279,15 +353,15 @@ def main(path,outpath,pixel_size=4.4):
 
 if __name__ == '__main__':
     # A = AerialCorrection(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 2.41)
-    # # A = AerialCorrection(r'D:\DJI_20230410091139_0008.JPG', r'D:\test', pixel_size=4.4)
+    # A = AerialCorrection(r'D:\DJI_20230410091139_0008.JPG', r'D:\test', pixel_size=4.4)
     # a = A.rotation()
     print('输入输出路径不包含中文')
     path = input('输入无人机照片路径：')
     outpath = input('输出路径：')
     pixel_size = input('输入像元尺寸：')
 
-
-    main(path, outpath, pixel_size)
+    # main(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 2.41)
+    # main(path, outpath, pixel_size)
 
     print('已完成')
-    input('输入任意键退出')
+    input('输入回车键退出')
