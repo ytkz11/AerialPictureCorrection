@@ -353,15 +353,16 @@ def main(path,outpath,pixel_size=4.4):
 
 if __name__ == '__main__':
     # A = AerialCorrection(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 2.41)
-    # A = AerialCorrection(r'D:\DJI_20230410091139_0008.JPG', r'D:\test', pixel_size=4.4)
+    # A = AerialCorrection(r'E:\000\DJI_20240608123140_0125_V.JPG', r'D:\test', pixel_size=4.4)
     # a = A.rotation()
-    print('输入输出路径不包含中文')
-    path = input('输入无人机照片路径：')
-    outpath = input('输出路径：')
-    pixel_size = input('输入像元尺寸：')
+    # print('输入输出路径不包含中文')
+    # path = input('输入无人机照片路径：')
+    # outpath = input('输出路径：')
+    # pixel_size = input('输入像元尺寸：')
 
-    # main(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 2.41)
-    main(path, outpath, pixel_size)
+    main(r'E:\109弥市镇——康家档子北', r'D:\test', pixel_size= 4.4)
+    # main(r'E:\000', r'D:\test', pixel_size=3.3)
+    # main(path, outpath, pixel_size)
 
     print('已完成')
     input('输入回车键退出')
