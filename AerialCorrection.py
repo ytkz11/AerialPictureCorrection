@@ -6,6 +6,8 @@
 # 航片校正
 
 import os
+import shutil
+
 try:
     import Image
     import ImageDraw
@@ -27,6 +29,8 @@ class tif2kmz:
    def __init__(self, tif_file):
        self.tif_file = tif_file
        self.kmz_file = os.path.splitext(self.tif_file)[0] + '.kmz'
+       self.kml_file = os.path.splitext(self.tif_file)[0] + '.kml'
+       self.png_file = os.path.splitext(self.tif_file)[0] + '.png'
 
    def get_arrtibute(self):
        # 获取tif文件的属性, 用于生成kml文件
@@ -39,8 +43,7 @@ class tif2kmz:
 
    def create_temp_png(self):
        ds = gdal.Open(self.tif_file, gdal.GA_ReadOnly)
-
-       png_file = os.path.splitext(self.tif_file)[0] + '.png'
+       png_file = 'overlay.png'
        data = ds.ReadAsArray()
        z,x,y = data.shape
        temp_arr = np.zeros(shape=(x, y, 4))
@@ -51,6 +54,8 @@ class tif2kmz:
        temp_arr = temp_arr.astype(np.uint8)
        img = Image.fromarray(temp_arr)
        img.save(png_file)
+
+       shutil.copy(png_file,self.png_file)
 
 
    def create_kml(self):
