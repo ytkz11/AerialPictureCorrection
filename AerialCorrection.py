@@ -39,7 +39,8 @@ class tif2kmz:
 
    def create_temp_png(self):
        ds = gdal.Open(self.tif_file, gdal.GA_ReadOnly)
-       png_file = 'overlay.png'
+
+       png_file = os.path.splitext(self.tif_file)[0] + '.png'
        data = ds.ReadAsArray()
        z,x,y = data.shape
        temp_arr = np.zeros(shape=(x, y, 4))
@@ -355,14 +356,14 @@ if __name__ == '__main__':
     # A = AerialCorrection(r'D:\DJI_0154.JPG', r'D:\test', pixel_size= 2.41)
     # A = AerialCorrection(r'E:\000\DJI_20240608123140_0125_V.JPG', r'D:\test', pixel_size=4.4)
     # a = A.rotation()
-    # print('输入输出路径不包含中文')
-    # path = input('输入无人机照片路径：')
-    # outpath = input('输出路径：')
-    # pixel_size = input('输入像元尺寸：')
+    print('输入输出路径不包含中文')
+    path = input('输入无人机照片路径：')
+    outpath = input('输出路径：')
+    pixel_size = input('输入像元尺寸：')
 
-    main(r'E:\109弥市镇——康家档子北', r'D:\test', pixel_size= 4.4)
+    # main(r'D:\111', r'D:\test', pixel_size= 4.4)
     # main(r'E:\000', r'D:\test', pixel_size=3.3)
-    # main(path, outpath, pixel_size)
+    main(path, outpath, pixel_size)
 
     print('已完成')
     input('输入回车键退出')
