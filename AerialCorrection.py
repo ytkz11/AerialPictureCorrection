@@ -96,11 +96,12 @@ class tif2kmz:
 
 
 class AerialCorrection():
-    def __init__(self, img, out_folder, pixel_size=4.4):
+    def __init__(self, img, out_folder=None, pixel_size=4.4):
         self.img = img
         self.out_folder = out_folder
-        self.temp_name = os.path.join(self.out_folder, os.path.splitext(os.path.basename(img))[0] + '_temp.tif')
-        self.out_name = os.path.join(self.out_folder, os.path.splitext(os.path.basename(img))[0] + '.tif')
+        if out_folder != None:
+            self.temp_name = os.path.join(self.out_folder, os.path.splitext(os.path.basename(img))[0] + '_temp.tif')
+            self.out_name = os.path.join(self.out_folder, os.path.splitext(os.path.basename(img))[0] + '.tif')
         self.pixel_size = pixel_size
 
     def rotation(self):
