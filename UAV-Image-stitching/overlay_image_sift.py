@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import random
 import math
 import PIL.Image as Image
-
+from skimage import transform
 def ransac(pts1, pts2):
     best_inlinenums = 0
     best_f = np.zeros([3, 3])
@@ -187,7 +187,7 @@ def warpImages(img1, img2, M):
 
 
         # 更新目标图像
-        img2 = new_img
+        img3 = new_img
 
         # 更新变换后的坐标
         dst[:, :, 0] += dx
@@ -198,16 +198,17 @@ def warpImages(img1, img2, M):
 
         # 显示结果图像
 
-        plt.imshow(img2, ), plt.show()
+        plt.imshow(img3, ), plt.show()
 
     # 将 img1 按照变换矩阵 M 变换到 img2 的空间
-    warped_img1 = cv2.warpPerspective(img1, M, (img2.shape[1], img2.shape[0]))
+    warped_img1 = cv2.warpPerspective(img1, M, (img3.shape[1], img3.shape[0]))
 
-    # 将 img1 和 img2 拼接在一起
-    result = cv2.addWeighted(img2, 1, warped_img1, 1, 0)
-    plt.imshow(result, ), plt.show()
-    img = Image.fromarray(result)
+    temp_arr = warped_img1
+    temp_arr[temp_arr== 0] = img3[temp_arr== 0]
+    img = Image.fromarray(temp_arr)
     img.save('merge_result.PNG')
+    return temp_arr
+
 def merge_image(img1,img2,kp1,kp2,good):
 
     src_pts = np.float32([kp1[m[0].queryIdx].pt for m in good]).reshape(-1, 1, 2)
