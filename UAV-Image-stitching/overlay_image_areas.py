@@ -85,7 +85,8 @@ def same_area(raster1, raster2):
         # 转换重叠区域的地理坐标到像素坐标
         top_left = geo_to_pixel(gt1, overlap[0], overlap[1])
         bottom_right = geo_to_pixel(gt1, overlap[2], overlap[3])
-        extended_top_left, extended_bottom_right = extended_range(top_left, bottom_right, ds1)
+        extended_top_left, extended_bottom_right = extended_range(top_left, bottom_right, ds1)  # 扩张范围
+        # extended_top_left, extended_bottom_right = top_left, bottom_right  # 不扩张范围
         print(f"在第一个图像中的重叠区域的像素坐标为: Top Left: {top_left}, Bottom Right: {bottom_right}")
 
         top_left2 = geo_to_pixel(gt2, overlap[0], overlap[1])

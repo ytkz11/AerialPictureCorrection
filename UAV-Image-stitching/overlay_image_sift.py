@@ -177,11 +177,11 @@ def warpImages(img1, img2, M):
         # 将原图像粘贴到新图像中
         dx = abs(min_x) if min_x < 0 else 0
         dy = abs(min_y) if min_y < 0 else 0
-        new_width = max(max_x, abs(min_x)) + dx
+        new_width = max(max_x, abs(min_x)) + dx+int(dx*2)
         new_height = max(max_y, abs(min_y)) + dy
 
         # 创建一个新的空白图像
-        new_img = np.zeros((new_height, new_width, 3), dtype=np.uint8)
+        new_img = np.zeros((new_height, new_width+dx, 3), dtype=np.uint8)
 
         new_img[dy:dy + img2.shape[0], dx:dx + img2.shape[1]] = img2
 
@@ -204,24 +204,28 @@ def warpImages(img1, img2, M):
     warped_img1 = cv2.warpPerspective(img1, M, (img3.shape[1], img3.shape[0]))
 
     temp_arr = warped_img1
-    temp_arr[temp_arr== 0] = img3[temp_arr== 0]
+    temp_arr[warped_img1== 0] = img3[temp_arr== 0]
     img = Image.fromarray(temp_arr)
-    img.save('merge_result.PNG')
+    img.save('merge.png')
     return temp_arr
-
+    # 将 img1 和 img2 拼接在一起
+    # result = cv2.addWeighted(img3, 1, warped_img1, 1, 0)
+    # plt.imshow(result, ), plt.show()
+    # img = Image.fromarray(result)
+    # img.save('merge_result.PNG')
 def merge_image(img1,img2,kp1,kp2,good):
 
     src_pts = np.float32([kp1[m[0].queryIdx].pt for m in good]).reshape(-1, 1, 2)
     dst_pts = np.float32([kp2[m[0].trainIdx].pt for m in good]).reshape(-1, 1, 2)
 
     # Establish a homography
-    M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+    M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 8)
 
     result = warpImages(img1, img2, M)
-    img = Image.fromarray(result)
-    img.save('merge.PNG')
-
-    plt.imshow(result),plt.show()
+    # img = Image.fromarray(result)
+    # img.save('Homography.png')
+    #
+    # plt.imshow(result),plt.show()
 if __name__ == '__main__':
     # 加载两个图像
     raster1 = r'D:\无人机\test\DJI_20230410091557_0118.tif'
@@ -233,5 +237,8 @@ if __name__ == '__main__':
 
     img = Image.fromarray(data2)
     img.save('overlay_image_part_image.PNG')
+
+    img = Image.fromarray(img2)
+    img.save('img2.png')
     sift(img1,img2)
 
