@@ -106,7 +106,7 @@ def same_area(raster1, raster2):
         # plt.imshow(data22), plt.show()
         print(f"在第二个图像中的重叠区域的像素坐标为: Top Left: {top_left2}, Bottom Right: {bottom_right2}")
 
-        return data11, data22
+        return data11, data22, (extended_top_left, extended_bottom_right), (extended_top_left2, extended_bottom_right2)
     else:
         print("两景影像没有重叠。")
         return None
