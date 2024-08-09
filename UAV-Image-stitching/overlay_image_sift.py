@@ -146,10 +146,27 @@ def sift(img1,img2):
 
     img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, ransac_good, None, **draw_params)
 
-    plt.imshow(img3, ), plt.show()
+    # plt.imshow(img3, ), plt.show()
     cv2.imwrite( 'overlay_image_sift_test2.jpg', img3)
     merge_image(img1,img2,kp1,kp2,ransac_good)
     print()
+
+
+def apply_perspective_transform(points, M):
+    # 将点转换为齐次坐标
+    points_homogeneous = np.hstack((points, np.ones((points.shape[0], 1), dtype=points.dtype)))
+
+    # 应用变换
+    transformed_points_homogeneous = np.dot(M, points_homogeneous.T).T
+
+    # 归一化齐次坐标
+    transformed_points = (transformed_points_homogeneous[:, :2] / transformed_points_homogeneous[:, 2][:, None]).astype(
+        np.int32)
+
+    return transformed_points
+
+
+
 def warpImages(img1, img2, M):
 
     h,w,z = img1.shape
@@ -189,6 +206,7 @@ def warpImages(img1, img2, M):
         # 更新目标图像
         img3 = new_img
 
+
         # 更新变换后的坐标
         dst[:, :, 0] += dx+int(dx*0.5)
         dst[:, :, 1] += dy
@@ -198,16 +216,16 @@ def warpImages(img1, img2, M):
 
         # 显示结果图像
 
-        plt.imshow(img3, ), plt.show()
+        # plt.imshow(img3, ), plt.show()
 
     # 将 img1 按照变换矩阵 M 变换到 img2 的空间
     warped_img1 = cv2.warpPerspective(img1, M, (img3.shape[1], img3.shape[0]))
 
     temp_arr = warped_img1
     temp_arr[temp_arr== 0] = img3[temp_arr== 0]
-    img = Image.fromarray(temp_arr)
-    img.save('merge.PNG')
-    return temp_arr
+    # img = Image.fromarray(temp_arr)
+    # img.save('merge.PNG')
+    return warped_img1, img3
     # 将 img1 和 img2 拼接在一起
     # result = cv2.addWeighted(img3, 1, warped_img1, 1, 0)
     # plt.imshow(result, ), plt.show()
@@ -221,24 +239,74 @@ def merge_image(img1,img2,kp1,kp2,good):
     # Establish a homography
     M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
+
+
+    # ransac 后的 匹配点
+    ransac_good = []
+    for i,j  in enumerate (_.tolist() ):
+        if j[0] ==1:
+            ransac_good.append(good[i])
+    print(ransac_good)
+
+    ransac_src_pts = [kp1[m[0].queryIdx].pt for m in ransac_good]
+    ransac_dst_pts = [kp2[m[0].trainIdx].pt for m in ransac_good]
+
+    # 根据匹配点判断是左图还是右图
+    if ransac_src_pts[0][0] < ransac_dst_pts[0][0]:
+        # 左图
+        print('img2是左图')
+        left_img = img2
+        right_img = img1
+    else:
+        # 右图
+        left_img = img1
+        right_img = img2
+
+        # 把 ransac_dst_pts点 显示在img2上
+    hl, wl = left_img.shape[:2]
+
+    hr, wr = right_img.shape[:2]
+    stitch_img = np.zeros((max(hl, hr), wl + wr, 3),
+                          dtype="int")  # create the (stitch)big image accroding the imgs height and width
+    stitch_img[:hl, :wl] = left_img
+    warped_right_img= cv2.warpPerspective(right_img, M, (stitch_img.shape[1], stitch_img.shape[0]))
+
+
+    # for pt in ransac_dst_pts:
+    #     cv2.circle(img2, (int(pt[0]), int(pt[1])), 5, (0, 255, 0), -1)
+    #     cv2.imwrite('img2_ransac_good.jpg', img2)
+
+    # 把 ransac_src_pts点 显示在img1上
+    img1= np.ascontiguousarray(img1)
+    for pt in ransac_src_pts:
+        cv2.circle(img1, (int(pt[0]), int(pt[1])), 5, (0, 255, 0), -1)
+    cv2.imwrite('img1_ransac_good.jpg', img1)
+
+
+    transformed_pts1 = apply_perspective_transform(src_pts, M)
+    transformed_pts2 = apply_perspective_transform(dst_pts, M)
+
+    # 检查变换后的坐标
+    print("Transformed coordinates transformed_pts1:")
+
     result = warpImages(img1, img2, M)
     img = Image.fromarray(result)
     img.save('merge.PNG')
 
-    plt.imshow(result),plt.show()
+    # plt.imshow(result),plt.show()
 if __name__ == '__main__':
     # 加载两个图像
-    raster1 = r'D:\无人机\test\DJI_20230410091557_0118.tif'
-    raster2 = r'D:\无人机\test\DJI_20230410091600_0119.tif'
-    img1,img2 = same_area(raster1, raster2)
+    raster1 = r'h:\无人机\test\DJI_20230410091557_0118.tif'
+    raster2 = r'h:\无人机\test\DJI_20230410091600_0119.tif'
+    img1, img2, img1_overlap_coor, img2_overlap_coor = same_area(raster1, raster2)
+    sift(img1, img2)
+
+
     data2 = match_3d(img1, img2)
-
     data2 = np.array(data2).astype('uint8')
-
     img = Image.fromarray(data2)
     img.save('overlay_image_part_image.PNG')
-
     img = Image.fromarray(img2)
     img.save('img2.png')
-    sift(img1,img2)
+
 
