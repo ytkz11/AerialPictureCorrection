@@ -100,8 +100,6 @@ def sift(img1,img2):
     kp2, des2 = sift.detectAndCompute(img2, None)  # des是描述子
     # Create a BFMatcher object to match descriptors
     # It will find all of the matching keypoints on two images
-    bf = cv2.BFMatcher_create(
-        cv2.NORM_HAMMING)  # NORM_HAMMING specifies the distance as a measurement of similarity between two descriptors
 
     # FLANN parameters
     FLANN_INDEX_KDTREE = 1
