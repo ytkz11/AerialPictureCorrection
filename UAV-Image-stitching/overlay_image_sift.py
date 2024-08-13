@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import random
 import math
 import PIL.Image as Image
+import warp
 from skimage import transform
 def ransac(pts1, pts2):
     best_inlinenums = 0
@@ -74,26 +75,27 @@ def match_3d( d1, d2):
         for i in range(z1):
             print(i)
             d3[1:1 + x2, 1:1 + y2, i] = d2[:, :, i]
-    else:
+        return d1, d3
+    elif x1 > x2 and y1 < y2:
+        d3 = np.zeros((x1, y2, 3)).astype('uint8')
+        for i in range(z1):
+            print(i)
+            d3[1:1 + x2, 1:1 + y1, i] = d2[:, :, i]
+        return d1, d3
+    elif x1 < x2 and y1 > y2:
+        d3 = np.zeros((x2, y1, 3)).astype('uint8')
+        for i in range(z1):
+            print(i)
+            d3[1:1 + x1, 1:1 + y2, i] = d1[:, :, i]
+        return d3, d2
+    elif x1 < x2 and y1 < y2:
+        d3 = np.zeros((x2, y2, 3)).astype('uint8')
+        for i in range(z1):
+            print(i)
+            d3[1:1 + x1, 1:1 + y1, i] = d1[:, :, i]
+        return d3, d2
 
-        if y1 < y2:
-            d3 = np.zeros((x2, y2, 3))
 
-            for i in range(z1):
-                d3[1:1 + x1, 1:1 + y1, i] = d1[:, :, i]
-
-    d = []
-    x3, y3, z3 = np.shape(d3)
-    datagray = np.zeros(shape=(x3, y3 * 2, z3)).astype('uint8')
-    datagray[:, 0:y3, :] = d3
-    if x3 == x1 and y3 == y1:
-        datagray[:, y3:y3 * 2, :] = d1
-    elif x3 == x2 and y3 == y2:
-        datagray[:, y3:y3 * 2, :] = d2
-
-    datagray[datagray == 0] = 255
-
-    return np.array(datagray).astype('uint8')
 def sift(img1,img2):
     sift = cv2.xfeatures2d.SIFT_create()
     kp1, des1 = sift.detectAndCompute(img1, None)  # des是描述子
@@ -146,7 +148,9 @@ def sift(img1,img2):
 
     # plt.imshow(img3, ), plt.show()
     cv2.imwrite( 'overlay_image_sift_test2.jpg', img3)
-    merge_image(img1,img2,kp1,kp2,ransac_good)
+    result = merge_image(img1,img2,kp1,kp2,ransac_good)
+    img = Image.fromarray(result)
+    img.save('merge.png')
     print()
 
 
@@ -244,7 +248,7 @@ def merge_image(img1,img2,kp1,kp2,good):
     for i,j  in enumerate (_.tolist() ):
         if j[0] ==1:
             ransac_good.append(good[i])
-    print(ransac_good)
+    # print(ransac_good)
 
     ransac_src_pts = [kp1[m[0].queryIdx].pt for m in ransac_good]
     ransac_dst_pts = [kp2[m[0].trainIdx].pt for m in ransac_good]
@@ -255,19 +259,41 @@ def merge_image(img1,img2,kp1,kp2,good):
         print('img2是左图')
         left_img = img2
         right_img = img1
+        right_pts = ransac_dst_pts
+
+        left_pts = ransac_src_pts
+
     else:
         # 右图
         left_img = img1
         right_img = img2
+        right_pts = ransac_src_pts
 
-        # 把 ransac_dst_pts点 显示在img2上
-    hl, wl = left_img.shape[:2]
+        left_pts = ransac_dst_pts
 
-    hr, wr = right_img.shape[:2]
-    stitch_img = np.zeros((max(hl, hr), wl + wr, 3),
-                          dtype="int")  # create the (stitch)big image accroding the imgs height and width
-    stitch_img[:hl, :wl] = left_img
-    warped_right_img= cv2.warpPerspective(right_img, M, (stitch_img.shape[1], stitch_img.shape[0]))
+    result = right_img
+
+    right_pts_ = np.float32(right_pts).reshape(-1, 1, 2)
+    left_pts_ = np.float32(left_pts).reshape(-1, 1, 2)
+    H, _ = cv2.findHomography(left_pts_, right_pts_, cv2.RANSAC, 5.0)
+
+
+    im_12 = warp.panorama(H, left_img,right_img,  200, 200)
+    im_12 = np.array(im_12).astype('uint8')
+    img = Image.fromarray(im_12)
+    img.save('pcv_merge_image.png')
+    # result = cv2.warpPerspective(result, H, (result.shape[1] + left_img.shape[1], result.shape[0]))
+    # result[0:left_img.shape[0], 0:left_img.shape[1]] = left_img
+    # return result
+
+    #     # 把 ransac_dst_pts点 显示在img2上
+    # hl, wl = left_img.shape[:2]
+    #
+    # hr, wr = right_img.shape[:2]
+    # stitch_img = np.zeros((max(hl, hr), wl + wr, 3),
+    #                       dtype="int")  # create the (stitch)big image accroding the imgs height and width
+    # stitch_img[:hl, :wl] = left_img
+    # warped_right_img= cv2.warpPerspective(right_img, M, (stitch_img.shape[1], stitch_img.shape[0]))
 
 
     # for pt in ransac_dst_pts:
@@ -287,6 +313,8 @@ def merge_image(img1,img2,kp1,kp2,good):
     # 检查变换后的坐标
     print("Transformed coordinates transformed_pts1:")
 
+
+
     result = warpImages(img1, img2, M)
     img = Image.fromarray(result)
     img.save('merge.PNG')
@@ -294,16 +322,21 @@ def merge_image(img1,img2,kp1,kp2,good):
     # plt.imshow(result),plt.show()
 if __name__ == '__main__':
     # 加载两个图像
-    raster1 = r'h:\无人机\test\DJI_20230410091557_0118.tif'
-    raster2 = r'h:\无人机\test\DJI_20230410091600_0119.tif'
+    raster1 = r'D:\无人机\test\DJI_20230410091557_0118.tif'
+    raster2 = r'D:\无人机\test\DJI_20230410091600_0119.tif'
     img1, img2, img1_overlap_coor, img2_overlap_coor = same_area(raster1, raster2)
-    sift(img1, img2)
 
+    image1 = cv2.imread('hill1.JPG')
+    image2 = cv2.imread('hill2.jpg')
 
-    data2 = match_3d(img1, img2)
+    d1,d2 = match_3d(img1, img2)
+
+    sift(d1,d2)
+    # d1+d2
+    data2= np.hstack((d1,d2))
     data2 = np.array(data2).astype('uint8')
     img = Image.fromarray(data2)
-    img.save('overlay_image_part_image.PNG')
+    img.save('overlay_image_part_image.png')
     img = Image.fromarray(img2)
     img.save('img2.png')
 
