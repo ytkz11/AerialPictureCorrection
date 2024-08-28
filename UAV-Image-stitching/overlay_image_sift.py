@@ -208,7 +208,7 @@ class overlay_image_sift:
             else:
                 new_left.append([x[1], x[0]])
 
-        self.save_point_json(left_img, right_img, left_pts, right_pts)
+        self.save_point_json(left_pts, right_pts)
 
         left_left_img, left_right_img = split_matrix(left_img, new_left)
         img = Image.fromarray(left_left_img)
@@ -221,7 +221,7 @@ class overlay_image_sift:
         img.save('右图的左边.png')
         img = Image.fromarray(right_right_img)
         img.save('右图的右边.png')
-    def save_point_json(self, left_img, right_img,left_pts, right_pts):
+    def save_point_json(self, left_pts, right_pts):
         '''
         point info save as json
         :param left_img:
@@ -231,13 +231,13 @@ class overlay_image_sift:
         :return:
         '''
         import json
-        jsonfile = os.path.splitext(os.path.basename(left_img))[0]+'_'+ os.path.splitext(os.path.basename(right_img))[0]+'.json'
+        jsonfile = os.path.splitext(os.path.basename(self.left_img_file ))[0]+'_'+ os.path.splitext(os.path.basename(self.right_img_file))[0]+'.json'
         # save json
 
         point_info = {
-            "leftfile": left_img,
+            "leftfile": self.left_img_file ,
             "leftpoint": left_pts,
-            "leftfile": right_img,
+            "leftfile": self.right_img_file,
             "leftpoint": right_pts,
         }
 
