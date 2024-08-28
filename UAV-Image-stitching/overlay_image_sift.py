@@ -99,7 +99,8 @@ def match_3d( d1, d2):
 
 class overlay_image_sift:
     def __init__(self,img_file_1,img_file_2):
-
+        self.img_file_1 = img_file_1
+        self.img_file_2 = img_file_2
         if os.path.splitext(img_file_1)[1] == '.tif':
             img_array_1, img_array_2, img1_overlap_coor, img2_overlap_coor = same_area(img_file_1, img_file_2)
             self.img1, self.img2 = match_3d(img_array_1, img_array_2)
@@ -144,16 +145,6 @@ class overlay_image_sift:
 
                 ransac_good.append([good[i]])
 
-        # draw_params = dict(matchColor=(0, 255, 0),
-        #                    # singlePointColor=(255, 0, 0),
-        #                    # matchesMask=matchesMask,
-        #                    flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-        #
-        # img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, ransac_good, None, **draw_params)
-        #
-        # # plt.imshow(img3, ), plt.show()
-        # cv2.imwrite( 'overlay_image_sift_test2.jpg', img3)
-
         self.filter_point(kp1,kp2,ransac_good)
 
         print()
@@ -176,22 +167,25 @@ class overlay_image_sift:
         ransac_src_pts = [kp1[m[0].queryIdx].pt for m in ransac_good]
         ransac_dst_pts = [kp2[m[0].trainIdx].pt for m in ransac_good]
 
-        # 根据匹配点判断是左图还是右图
+        # Determine whether it is a left or right image based on the matching points
         if np.sum(np.array(ransac_src_pts)[:, 0]) < np.sum(np.array(ransac_dst_pts)[:, 0]):
             # 左图
-            print('img2是左图')
-
+            print('img2 if right img')
+            self.right_img_file = self.img_file_1
             right_img = self.img1
             right_pts = ransac_src_pts
 
+            self.left_img_file = self.img_file_2
             left_img = self.img2
             left_pts = ransac_dst_pts
 
         else:
-            # 右图
+            # right image
+            self.left_img_file = self.img_file_1
             left_img = self.img1
             left_pts = ransac_src_pts
 
+            self.right_img_file = self.img_file_2
             right_img = self.img2
             right_pts = ransac_dst_pts
 
@@ -228,22 +222,28 @@ class overlay_image_sift:
         img = Image.fromarray(right_right_img)
         img.save('右图的右边.png')
     def save_point_json(self, left_img, right_img,left_pts, right_pts):
+        '''
+        point info save as json
+        :param left_img:
+        :param right_img:
+        :param left_pts:
+        :param right_pts:
+        :return:
+        '''
         import json
         jsonfile = os.path.splitext(os.path.basename(left_img))[0]+'_'+ os.path.splitext(os.path.basename(right_img))[0]+'.json'
         # save json
 
-        person = {
+        point_info = {
             "leftfile": left_img,
             "leftpoint": left_pts,
             "leftfile": right_img,
             "leftpoint": right_pts,
         }
 
-        # 将 Python 字典转换为 JSON 字符串
-        person_json = json.dumps(person, indent=4)
+        with open(jsonfile, 'w') as f:
+            json.dump(point_info, f, indent=4)
 
-        print("JSON 字符串:")
-        print(person_json)
 def apply_perspective_transform(points, M):
     # 将点转换为齐次坐标
     points_homogeneous = np.hstack((points, np.ones((points.shape[0], 1), dtype=points.dtype)))
