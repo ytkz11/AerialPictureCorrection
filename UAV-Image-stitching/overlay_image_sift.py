@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*- 
-# @Time : 2024/8/7 上午11:28 
+# -*- coding: utf-8 -*-
 # @File : overlay_image_sift.py 
 '''
 
 '''
+import os.path
+
 from overlay_image_areas import same_area
 import cv2
 import numpy as np
@@ -13,6 +14,7 @@ import random
 import math
 import PIL.Image as Image
 import warp
+from split_left_right_image import split_matrix
 from skimage import transform
 def ransac(pts1, pts2):
     best_inlinenums = 0
@@ -95,65 +97,153 @@ def match_3d( d1, d2):
             d3[1:1 + x1, 1:1 + y1, i] = d1[:, :, i]
         return d3, d2
 
+class overlay_image_sift:
+    def __init__(self,img_file_1,img_file_2):
 
-def sift(img1,img2):
-    sift = cv2.xfeatures2d.SIFT_create()
-    kp1, des1 = sift.detectAndCompute(img1, None)  # des是描述子
-    kp2, des2 = sift.detectAndCompute(img2, None)  # des是描述子
-    # Create a BFMatcher object to match descriptors
-    # It will find all of the matching keypoints on two images
+        if os.path.splitext(img_file_1)[1] == '.tif':
+            img_array_1, img_array_2, img1_overlap_coor, img2_overlap_coor = same_area(img_file_1, img_file_2)
+            self.img1, self.img2 = match_3d(img_array_1, img_array_2)
 
-    # FLANN parameters
-    FLANN_INDEX_KDTREE = 1
-    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-    search_params = dict(checks=50)  # or pass empty dictionary
-
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
-
-    matches = flann.knnMatch(des1, des2, k=2)
-
-    good = []  # 较好的匹配
-    pts1 = []  # img1中较好的匹配的坐标
-    pts2 = []
-
-    for i, (m, n) in enumerate(matches):
-        if m.distance < 0.7 * n.distance:
-            good.append(m)
-            pts1.append(kp1[m.queryIdx].pt)
-            pts2.append(kp2[m.trainIdx].pt)
-
-    best_f, distances = ransac(pts1, pts2)
-    matchesMask = [[0, 0] for i in range(len(good))]
-    ransac_good = []
-    for i, k in enumerate(distances):
-        if k <= 1:
-            matchesMask[i] = [1, 0]
-
-            ransac_good.append([good[i]])
+        else:
+            self.img1 = cv2.imread(img_file_1)
+            self.img2 = cv2.imread(img_file_2)
 
 
+    def sift(self):
+        sift = cv2.xfeatures2d.SIFT_create()
+        kp1, des1 = sift.detectAndCompute(self.img1, None)  # des是描述子
+        kp2, des2 = sift.detectAndCompute(self.img2, None)  # des是描述子
+        # Create a BFMatcher object to match descriptors
+        # It will find all of the matching keypoints on two images
 
+        # FLANN parameters
+        FLANN_INDEX_KDTREE = 1
+        index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+        search_params = dict(checks=50)  # or pass empty dictionary
 
-    # ratio test as per Lowe's paper
-    # for i, (m, n) in enumerate(matches):
-    #     if m.distance < 0.6 * n.distance:
-    #         matchesMask[i] = [1, 0]
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-    draw_params = dict(matchColor=(0, 255, 0),
-                       # singlePointColor=(255, 0, 0),
-                       # matchesMask=matchesMask,
-                       flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        matches = flann.knnMatch(des1, des2, k=2)
 
-    img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, ransac_good, None, **draw_params)
+        good = []  # 较好的匹配
+        pts1 = []  # img1中较好的匹配的坐标
+        pts2 = []
 
-    # plt.imshow(img3, ), plt.show()
-    cv2.imwrite( 'overlay_image_sift_test2.jpg', img3)
-    result = merge_image(img1,img2,kp1,kp2,ransac_good)
-    img = Image.fromarray(result)
-    img.save('merge.png')
-    print()
+        for i, (m, n) in enumerate(matches):
+            if m.distance < 0.7 * n.distance:
+                good.append(m)
+                pts1.append(kp1[m.queryIdx].pt)
+                pts2.append(kp2[m.trainIdx].pt)
 
+        best_f, distances = ransac(pts1, pts2)
+        matchesMask = [[0, 0] for i in range(len(good))]
+        ransac_good = []
+        for i, k in enumerate(distances):
+            if k <= 1:
+                matchesMask[i] = [1, 0]
 
+                ransac_good.append([good[i]])
+
+        # draw_params = dict(matchColor=(0, 255, 0),
+        #                    # singlePointColor=(255, 0, 0),
+        #                    # matchesMask=matchesMask,
+        #                    flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        #
+        # img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, ransac_good, None, **draw_params)
+        #
+        # # plt.imshow(img3, ), plt.show()
+        # cv2.imwrite( 'overlay_image_sift_test2.jpg', img3)
+
+        self.filter_point(kp1,kp2,ransac_good)
+
+        print()
+
+    def filter_point(self, kp1, kp2, good):
+
+        src_pts = np.float32([kp1[m[0].queryIdx].pt for m in good]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp2[m[0].trainIdx].pt for m in good]).reshape(-1, 1, 2)
+
+        # Establish a homography
+        M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+
+        # ransac 后的 匹配点
+        ransac_good = []
+        for i, j in enumerate(_.tolist()):
+            if j[0] == 1:
+                ransac_good.append(good[i])
+        # print(ransac_good)
+
+        ransac_src_pts = [kp1[m[0].queryIdx].pt for m in ransac_good]
+        ransac_dst_pts = [kp2[m[0].trainIdx].pt for m in ransac_good]
+
+        # 根据匹配点判断是左图还是右图
+        if np.sum(np.array(ransac_src_pts)[:, 0]) < np.sum(np.array(ransac_dst_pts)[:, 0]):
+            # 左图
+            print('img2是左图')
+
+            right_img = self.img1
+            right_pts = ransac_src_pts
+
+            left_img = self.img2
+            left_pts = ransac_dst_pts
+
+        else:
+            # 右图
+            left_img = self.img1
+            left_pts = ransac_src_pts
+
+            right_img = self.img2
+            right_pts = ransac_dst_pts
+
+        # 排序
+        right_pts_int = sorted(np.int16(right_pts), key=lambda x: x[1])
+        left_pts_int = sorted(np.int16(left_pts), key=lambda x: x[1])
+        # 去除重复行号的数据
+        new_right = []
+        new_left = []
+        for i, x in enumerate(right_pts_int):
+            if i > 0:
+                if right_pts_int[i][0] > right_pts_int[i - 1][0]:
+                    new_right.append([x[1], x[0]])
+            else:
+                new_right.append([x[1], x[0]])
+        for i, x in enumerate(left_pts_int):
+            if i > 0:
+                if left_pts_int[i][0] > left_pts_int[i - 1][0]:
+                    new_left.append([x[1], x[0]])
+            else:
+                new_left.append([x[1], x[0]])
+
+        self.save_point_json(left_img, right_img, left_pts, right_pts)
+
+        left_left_img, left_right_img = split_matrix(left_img, new_left)
+        img = Image.fromarray(left_left_img)
+        img.save('左图的左边.png')
+        img = Image.fromarray(left_right_img)
+        img.save('左图的右边.png')
+
+        right_left_img, right_right_img = split_matrix(right_img, new_right)
+        img = Image.fromarray(right_left_img)
+        img.save('右图的左边.png')
+        img = Image.fromarray(right_right_img)
+        img.save('右图的右边.png')
+    def save_point_json(self, left_img, right_img,left_pts, right_pts):
+        import json
+        jsonfile = os.path.splitext(os.path.basename(left_img))[0]+'_'+ os.path.splitext(os.path.basename(right_img))[0]+'.json'
+        # save json
+
+        person = {
+            "leftfile": left_img,
+            "leftpoint": left_pts,
+            "leftfile": right_img,
+            "leftpoint": right_pts,
+        }
+
+        # 将 Python 字典转换为 JSON 字符串
+        person_json = json.dumps(person, indent=4)
+
+        print("JSON 字符串:")
+        print(person_json)
 def apply_perspective_transform(points, M):
     # 将点转换为齐次坐标
     points_homogeneous = np.hstack((points, np.ones((points.shape[0], 1), dtype=points.dtype)))
@@ -213,131 +303,27 @@ def warpImages(img1, img2, M):
         dst[:, :, 0] += dx+int(dx*0.5)
         dst[:, :, 1] += dy
 
-        # 绘制多边形
-        # img2 = cv2.polylines(img2, [np.int32(dst)], True, (255, 0, 0), 3, cv2.LINE_AA)
-
-        # 显示结果图像
-
-        # plt.imshow(img3, ), plt.show()
-
     # 将 img1 按照变换矩阵 M 变换到 img2 的空间
     warped_img1 = cv2.warpPerspective(img1, M, (img3.shape[1], img3.shape[0]))
 
     temp_arr = warped_img1
     temp_arr[temp_arr== 0] = img3[temp_arr== 0]
-    # img = Image.fromarray(temp_arr)
-    # img.save('merge.PNG')
+
     return warped_img1, img3
-    # 将 img1 和 img2 拼接在一起
-    # result = cv2.addWeighted(img3, 1, warped_img1, 1, 0)
-    # plt.imshow(result, ), plt.show()
-    # img = Image.fromarray(result)
-    # img.save('merge_result.PNG')
-def merge_image(img1,img2,kp1,kp2,good):
 
-    src_pts = np.float32([kp1[m[0].queryIdx].pt for m in good]).reshape(-1, 1, 2)
-    dst_pts = np.float32([kp2[m[0].trainIdx].pt for m in good]).reshape(-1, 1, 2)
-
-    # Establish a homography
-    M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-
-
-
-    # ransac 后的 匹配点
-    ransac_good = []
-    for i,j  in enumerate (_.tolist() ):
-        if j[0] ==1:
-            ransac_good.append(good[i])
-    # print(ransac_good)
-
-    ransac_src_pts = [kp1[m[0].queryIdx].pt for m in ransac_good]
-    ransac_dst_pts = [kp2[m[0].trainIdx].pt for m in ransac_good]
-
-    # 根据匹配点判断是左图还是右图
-    if ransac_src_pts[0][0] < ransac_dst_pts[0][0]:
-        # 左图
-        print('img2是左图')
-        left_img = img2
-        right_img = img1
-        right_pts = ransac_dst_pts
-
-        left_pts = ransac_src_pts
-
-    else:
-        # 右图
-        left_img = img1
-        right_img = img2
-        right_pts = ransac_src_pts
-
-        left_pts = ransac_dst_pts
-
-    result = right_img
-
-    right_pts_ = np.float32(right_pts).reshape(-1, 1, 2)
-    left_pts_ = np.float32(left_pts).reshape(-1, 1, 2)
-    H, _ = cv2.findHomography(left_pts_, right_pts_, cv2.RANSAC, 5.0)
-
-
-    im_12 = warp.panorama(H, left_img,right_img,  200, 200)
-    im_12 = np.array(im_12).astype('uint8')
-    img = Image.fromarray(im_12)
-    img.save('pcv_merge_image.png')
-    # result = cv2.warpPerspective(result, H, (result.shape[1] + left_img.shape[1], result.shape[0]))
-    # result[0:left_img.shape[0], 0:left_img.shape[1]] = left_img
-    # return result
-
-    #     # 把 ransac_dst_pts点 显示在img2上
-    # hl, wl = left_img.shape[:2]
-    #
-    # hr, wr = right_img.shape[:2]
-    # stitch_img = np.zeros((max(hl, hr), wl + wr, 3),
-    #                       dtype="int")  # create the (stitch)big image accroding the imgs height and width
-    # stitch_img[:hl, :wl] = left_img
-    # warped_right_img= cv2.warpPerspective(right_img, M, (stitch_img.shape[1], stitch_img.shape[0]))
-
-
-    # for pt in ransac_dst_pts:
-    #     cv2.circle(img2, (int(pt[0]), int(pt[1])), 5, (0, 255, 0), -1)
-    #     cv2.imwrite('img2_ransac_good.jpg', img2)
-
-    # 把 ransac_src_pts点 显示在img1上
-    img1= np.ascontiguousarray(img1)
-    for pt in ransac_src_pts:
-        cv2.circle(img1, (int(pt[0]), int(pt[1])), 5, (0, 255, 0), -1)
-    cv2.imwrite('img1_ransac_good.jpg', img1)
-
-
-    transformed_pts1 = apply_perspective_transform(src_pts, M)
-    transformed_pts2 = apply_perspective_transform(dst_pts, M)
-
-    # 检查变换后的坐标
-    print("Transformed coordinates transformed_pts1:")
-
-
-
-    result = warpImages(img1, img2, M)
-    img = Image.fromarray(result)
-    img.save('merge.PNG')
-
-    # plt.imshow(result),plt.show()
 if __name__ == '__main__':
     # 加载两个图像
     raster1 = r'D:\无人机\test\DJI_20230410091557_0118.tif'
     raster2 = r'D:\无人机\test\DJI_20230410091600_0119.tif'
-    img1, img2, img1_overlap_coor, img2_overlap_coor = same_area(raster1, raster2)
+    overlay_image_sift(raster1, raster2).sift()
+
 
     image1 = cv2.imread('hill1.JPG')
     image2 = cv2.imread('hill2.jpg')
 
-    d1,d2 = match_3d(img1, img2)
 
-    sift(d1,d2)
-    # d1+d2
-    data2= np.hstack((d1,d2))
-    data2 = np.array(data2).astype('uint8')
-    img = Image.fromarray(data2)
-    img.save('overlay_image_part_image.png')
-    img = Image.fromarray(img2)
-    img.save('img2.png')
+
+
+
 
 
