@@ -13,9 +13,8 @@ import matplotlib.pyplot as plt
 import random
 import math
 import PIL.Image as Image
-import warp
 from split_left_right_image import split_matrix
-from skimage import transform
+
 def ransac(pts1, pts2):
     best_inlinenums = 0
     best_f = np.zeros([3, 3])
@@ -221,6 +220,15 @@ class overlay_image_sift:
         img.save('右图的左边.png')
         img = Image.fromarray(right_right_img)
         img.save('右图的右边.png')
+
+        # save as npy
+        np.save('左图的左边.npy', left_left_img)
+        np.save('左图的右边.npy', left_right_img)
+
+        np.save('右图的左边.npy', right_left_img)
+        np.save('右图的右边.npy', right_right_img)
+
+
     def save_point_json(self, left_pts, right_pts):
         '''
         point info save as json
@@ -317,7 +325,8 @@ if __name__ == '__main__':
     raster2 = r'D:\无人机\test\DJI_20230410091600_0119.tif'
     overlay_image_sift(raster1, raster2).sift()
 
-
+    path = r'D:\temp\aerial_data'
+    os.chdir(path)
     image1 = cv2.imread('hill1.JPG')
     image2 = cv2.imread('hill2.jpg')
 
