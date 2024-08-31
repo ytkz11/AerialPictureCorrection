@@ -105,6 +105,13 @@ class overlay_image_sift:
             # self.img1, self.img2 = match_3d(img_array_1, img_array_2)  # same size
             self.img1, self.img2 = img_array_1, img_array_2
 
+            # save as image
+            img = Image.fromarray(self.img1)
+            img.save('img1.JPG')
+            img = Image.fromarray(self.img2)
+            img.save('img2.JPG')
+
+
         else:
             self.img1 = cv2.imread(img_file_1)
             self.img2 = cv2.imread(img_file_2)
@@ -131,7 +138,7 @@ class overlay_image_sift:
         pts2 = []
 
         for i, (m, n) in enumerate(matches):
-            if m.distance < 0.7 * n.distance:
+            if m.distance < 0.6 * n.distance:
                 good.append(m)
                 pts1.append(kp1[m.queryIdx].pt)
                 pts2.append(kp2[m.trainIdx].pt)
@@ -189,6 +196,44 @@ class overlay_image_sift:
             right_img = self.img2
             right_pts = ransac_dst_pts
 
+        # 整理为 （x,1,2)的大小
+        right_pts1 = np.array(right_pts).reshape(-1, 1, 2)
+        left_pts1 = np.array(left_pts).reshape(-1, 1, 2)
+        M1, _ = cv2.findHomography(right_pts1,left_pts1, cv2.RANSAC, 2)
+        width = right_img.shape[1] + left_img.shape[1]
+        height = right_img.shape[0]+2 #+ left_left_img.shape[0]
+
+        result = cv2.warpPerspective(right_img, M1, (width, height))
+        out = result.copy()
+        temp = out[:left_img.shape[0], :left_img.shape[1]]
+        temp2 = left_img.copy()
+        temp2[temp != 0] =0
+        out[:left_img.shape[0], :left_img.shape[1]] += temp2
+        plt.imshow(out)
+        plt.show()
+        img = Image.fromarray(out)
+        img.save('临时的拼接.png')
+
+        w1, w2 = left_img.shape[1], right_img.shape[1]
+        h1, h2 = left_img.shape[0], right_img.shape[0]
+        canvas_width = w1 + w2
+        canvas_height = max(h1, h2)
+
+
+
+
+        # 将对第一张图像放置在画布上
+        canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
+        canvas[:h1, :w1] = left_img
+
+        # 对第二张图像进行变换并放置在画布上
+        transformed_image2 = cv2.warpPerspective(right_img, M, (canvas_width, canvas_height), flags=cv2.WARP_INVERSE_MAP)
+        transformed_image2[:h1, :w1] = 0
+        canvas = cv2.addWeighted(canvas, 1, transformed_image2, 1, 0)
+        img = Image.fromarray(canvas)
+        img.save('canvas.png')
+
+
         # 排序
         right_pts_int = sorted(np.int16(right_pts), key=lambda x: x[1])
         left_pts_int = sorted(np.int16(left_pts), key=lambda x: x[1])
@@ -208,7 +253,7 @@ class overlay_image_sift:
             else:
                 new_left.append([x[1], x[0]])
 
-        self.save_point_json(left_pts, right_pts)
+        self.save_point_json(left_pts, right_pts, M)
 
         left_left_img, left_right_img = split_matrix(left_img, new_left)
         img = Image.fromarray(left_left_img)
@@ -230,7 +275,20 @@ class overlay_image_sift:
         np.save('右图的右边.npy', right_right_img)
 
 
-    def save_point_json(self, left_pts, right_pts):
+
+        result = cv2.warpPerspective(right_right_img, M1, (width, height))
+        out = result.copy()
+        temp = out[:left_left_img.shape[0], :left_left_img.shape[1]]
+        temp2 = left_left_img.copy()
+        temp2[temp != 0] = 0
+        out[:left_left_img.shape[0], :left_left_img.shape[1]] += temp2
+        plt.imshow(out)
+        plt.show()
+        img = Image.fromarray(out)
+        img.save('临时的拼接1.png')
+
+
+    def save_point_json(self, left_pts, right_pts, M):
         '''
         point info save as json
         :param left_img:
@@ -248,6 +306,7 @@ class overlay_image_sift:
             "leftpoint": left_pts,
             "rightfile": self.right_img_file,
             "rightpoint": right_pts,
+            "Homography": M.tolist()
         }
 
         with open(jsonfile, 'w') as f:
