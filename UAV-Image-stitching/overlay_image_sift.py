@@ -245,8 +245,8 @@ class overlay_image_sift:
         point_info = {
             "leftfile": self.left_img_file ,
             "leftpoint": left_pts,
-            "leftfile": self.right_img_file,
-            "leftpoint": right_pts,
+            "rightfile": self.right_img_file,
+            "rightpoint": right_pts,
         }
 
         with open(jsonfile, 'w') as f:
