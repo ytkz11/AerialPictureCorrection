@@ -102,7 +102,8 @@ class overlay_image_sift:
         self.img_file_2 = img_file_2
         if os.path.splitext(img_file_1)[1] == '.tif':
             img_array_1, img_array_2, img1_overlap_coor, img2_overlap_coor = same_area(img_file_1, img_file_2)
-            self.img1, self.img2 = match_3d(img_array_1, img_array_2)
+            # self.img1, self.img2 = match_3d(img_array_1, img_array_2)  # same size
+            self.img1, self.img2 = img_array_1, img_array_2
 
         else:
             self.img1 = cv2.imread(img_file_1)
