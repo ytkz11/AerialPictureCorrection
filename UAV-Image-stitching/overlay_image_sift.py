@@ -321,12 +321,16 @@ def warpImages(img1, img2, M):
 
 if __name__ == '__main__':
     # 加载两个图像
-    raster1 = r'D:\无人机\test\DJI_20230410091557_0118.tif'
-    raster2 = r'D:\无人机\test\DJI_20230410091600_0119.tif'
+    raster1 = r'H:\无人机\test\DJI_20230410091557_0118.tif'
+    raster2 = r'H:\无人机\test\DJI_20230410091600_0119.tif'
+    path = r'D:\temp\aerial_data'
+    if os.path.exists(path) == 0:
+        os.makedirs(path)
+    os.chdir(path)
+
     overlay_image_sift(raster1, raster2).sift()
 
-    path = r'D:\temp\aerial_data'
-    os.chdir(path)
+
     image1 = cv2.imread('hill1.JPG')
     image2 = cv2.imread('hill2.jpg')
 
