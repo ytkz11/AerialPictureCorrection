@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*- 
-# @Time : 2024/8/28 下午1:28 
+# -*- coding: utf-8 -*-
 # @File : split_left_right_image.py 
 '''
 
